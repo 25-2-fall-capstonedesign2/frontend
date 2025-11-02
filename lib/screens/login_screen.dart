@@ -1,10 +1,8 @@
 import 'package:anycall/screens/home_screen.dart';
-import 'package:anycall/screens/terms_screen.dart';
-import 'package:anycall/screens/privacy_policy_screen.dart';
+import 'package:anycall/screens/terms_screen.dart'; // 약관 화면 import
+import 'package:anycall/screens/privacy_policy_screen.dart'; // 개인정보 화면 import
 import 'package:flutter/material.dart';
-// import 'package:anycall/common/app_colors.dart'; // 색상 파일이 있다면 사용
 
-// 1. StatefulWidget으로 변경
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,31 +11,28 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // 2. 전화번호와 비밀번호 입력값을 가져오기 위한 컨트롤러 선언
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    // 위젯이 사라질 때 컨트롤러 정리
-    _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  // 3. 로그인 실패 팝업을 띄우는 함수
   void _showLoginFailedDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('로그인 실패'),
-          content: const Text('전화번호와 비밀번호를 모두 입력해주세요.'),
+          content: const Text('이메일과 비밀번호를 모두 입력해주세요.'),
           actions: <Widget>[
             TextButton(
               child: const Text('확인'),
               onPressed: () {
-                Navigator.of(context).pop(); // 팝업 닫기
+                Navigator.of(context).pop();
               },
             ),
           ],
@@ -49,132 +44,139 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: AppColors.background,
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 80),
-              const Text(
-                'AI 전화',
-                style: TextStyle(
-                  // color: AppColors.textPrimary,
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. 배경 이미지
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/login_screen.png'),
+                fit: BoxFit.cover,
               ),
-              const SizedBox(height: 10),
-              const Text(
-                '인공지능과 실시간 음성 대화하는 플랫폼',
-                style: TextStyle(
-                  // color: AppColors.textSecondary,
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 60),
+            ),
+          ),
 
-              // 4. 전화번호 입력 필드에 컨트롤러 연결
-              TextField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: '전화번호',
-                  labelStyle: TextStyle(color: Colors.grey),
-                ),
-                style: const TextStyle(color: Colors.white),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 20),
-
-              // 5. 비밀번호 입력 필드에 컨트롤러 연결
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: '비밀번호',
-                  labelStyle: TextStyle(color: Colors.grey),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const Spacer(),
-
-              // 6. 로그인 버튼 로직 수정
-              ElevatedButton(
-                onPressed: () {
-                  // 입력값이 비어있는지 확인
-                  if (_phoneController.text.isEmpty || _passwordController.text.isEmpty) {
-                    // 비어있다면 팝업 띄우기
-                    _showLoginFailedDialog();
-                  } else {
-                    // 비어있지 않다면 홈 화면으로 이동
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue, // AppColors.primary
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text('로그인'),
-              ),
-
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center, // 버튼들을 중앙에 배치
+          // 2. UI 요소
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 이용약관 버튼
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const TermsScreen()),
-                      );
-                    },
-                    child: const Text(
-                      '이용약관',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12, // 폰트 크기 약간 줄임
-                        decoration: TextDecoration.underline,
+                  const Spacer(flex: 2),
+
+                  // 3. 아이디 입력 필드
+                  TextField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: '아이디',
+                      labelStyle: TextStyle(color: Colors.grey[400]),
+                      filled: true,
+                      fillColor: Colors.black.withOpacity(0.3),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white70),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white),
                       ),
                     ),
+                    style: const TextStyle(color: Colors.white),
+                    keyboardType: TextInputType.emailAddress,
                   ),
+                  const SizedBox(height: 20),
 
-                  // 버튼 사이의 구분선
-                  const Text(
-                    ' | ',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-
-                  // 개인정보처리방침 버튼
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
-                      );
-                    },
-                    child: const Text(
-                      '개인정보처리방침',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                        decoration: TextDecoration.underline,
+                  // 4. 비밀번호 입력 필드
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: '비밀번호',
+                      labelStyle: TextStyle(color: Colors.grey[400]),
+                      filled: true,
+                      fillColor: Colors.black.withOpacity(0.3),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white70),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white),
                       ),
                     ),
+                    style: const TextStyle(color: Colors.white),
                   ),
+                  const SizedBox(height: 40),
+
+                  // 5. 로그인 버튼
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+                        _showLoginFailedDialog();
+                      } else {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (context) => const HomeScreen()),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        )
+                    ),
+                    child: const Text('로그인'),
+                  ),
+
+                  const Spacer(flex: 1), // 로그인 버튼과 약관 버튼 사이의 공간
+
+                  // --- 6. 약관 버튼들 (다시 추가) ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const TermsScreen()),
+                          );
+                        },
+                        child: const Text(
+                          '이용약관',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        ' | ',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+                          );
+                        },
+                        child: const Text(
+                          '개인정보처리방침',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20), // 하단 여백
                 ],
               ),
-
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
