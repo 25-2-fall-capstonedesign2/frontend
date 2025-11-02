@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  //********* 실제 서버 주소로 변경하기! *********//
+  //********* 실제 벡엔드에서 설정한 서버 주소로 변경하기! *********//
   static const String _baseUrl = 'http://localhost:8080';
   static const _storage = FlutterSecureStorage();
 
