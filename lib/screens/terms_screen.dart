@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:anycall/Commons/app_colors.dart';
 
 class TermsScreen extends StatelessWidget {
   const TermsScreen({super.key});
@@ -6,11 +7,12 @@ class TermsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       // 1. 상단 앱 바
       appBar: AppBar(
         // 뒤로가기 버튼이 자동으로 생기지만, 제목을 추가합니다.
         title: const Text('이용약관'),
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background,
         foregroundColor: Colors.white,
         // // 2. 우상단에 닫기(로그인 화면으로 돌아가기) 버튼 추가
         // actions: [
