@@ -1,6 +1,9 @@
+// lib/screens/login_screen.dart
+
 import 'package:anycall/screens/home_screen.dart';
-import 'package:anycall/screens/terms_screen.dart'; // 약관 화면 import
-import 'package:anycall/screens/privacy_policy_screen.dart'; // 개인정보 화면 import
+import 'package:anycall/screens/terms_screen.dart';
+import 'package:anycall/screens/privacy_policy_screen.dart';
+import 'package:anycall/screens/signup_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. 배경 이미지
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -56,8 +58,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-
-          // 2. UI 요소
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
@@ -66,11 +66,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Spacer(flex: 2),
 
-                  // 3. 아이디 입력 필드
+                  // 3. 아이디(이메일) 입력 필드
                   TextField(
                     controller: _emailController,
                     decoration: InputDecoration(
-                      labelText: '아이디',
+                      labelText: '이메일',
                       labelStyle: TextStyle(color: Colors.grey[400]),
                       filled: true,
                       fillColor: Colors.black.withOpacity(0.3),
@@ -124,12 +124,48 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(8),
                         )
                     ),
-                    child: const Text('로그인'),
+                    child: const Text(
+                      '로그인',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
 
-                  const Spacer(flex: 1), // 로그인 버튼과 약관 버튼 사이의 공간
+                  // 6. 회원가입 버튼
+                  const SizedBox(height: 16),
+                  FractionallySizedBox(
+                    widthFactor: 0.5,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SignupScreen()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[700],
+                        minimumSize: const Size(0, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        '회원가입',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
 
-                  // --- 6. 약관 버튼들 (다시 추가) ---
+                  const Spacer(flex: 1),
+
+                  // 7. 약관 버튼들
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -143,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text(
                           '이용약관',
                           style: TextStyle(
-                            color: Colors.grey,
+                            color: Colors.white,
                             fontSize: 12,
                             decoration: TextDecoration.underline,
                           ),
@@ -151,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const Text(
                         ' | ',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
                       TextButton(
                         onPressed: () {
@@ -163,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text(
                           '개인정보처리방침',
                           style: TextStyle(
-                            color: Colors.grey,
+                            color: Colors.white,
                             fontSize: 12,
                             decoration: TextDecoration.underline,
                           ),
@@ -171,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20), // 하단 여백
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
