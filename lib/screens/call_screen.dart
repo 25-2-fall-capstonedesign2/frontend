@@ -29,7 +29,7 @@ class _CallScreenState extends State<CallScreen> {
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
   final FlutterSoundPlayer _player = FlutterSoundPlayer();
 
-  // --- 👇 1. 오디오 데이터를 위한 별도의 StreamController 선언 👇 ---
+  // --- 1. 오디오 데이터를 위한 별도의 StreamController 선언 ---
   StreamController<Uint8List>? _audioDataController;
   StreamSubscription<Uint8List>? _audioDataSubscription;
   StreamSubscription? _webSocketSubscription;
