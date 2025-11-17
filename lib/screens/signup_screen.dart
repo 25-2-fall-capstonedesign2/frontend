@@ -73,7 +73,7 @@ class _SignupScreenState extends State<SignupScreen> {
               TextField(
                 controller: _displayNameController,
                 decoration: InputDecoration(
-                  labelText: '이름 (표시용)',
+                  labelText: '사용자 이름',
                   labelStyle: TextStyle(color: Colors.grey[400]),
                   filled: true,
                   fillColor: Colors.black.withOpacity(0.3),
@@ -97,7 +97,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
                 ),
-                child: const Text('회원가입 완료'),
+                child: const Text(
+                  '회원가입 완료',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
