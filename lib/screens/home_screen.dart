@@ -1,5 +1,3 @@
-// lib/screens/home_screen.dart
-
 import 'package:anycall/screens/login_screen.dart';
 import 'package:anycall/screens/call_screen.dart';
 import 'package:anycall/screens/chat_history_screen.dart';
@@ -144,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Divider(),
           const SizedBox(height: 20),
           Text(
-            'AI 친구들 (${_filteredFriends.length})',
+            '가상 통화 목록 (${_filteredFriends.length})',
             style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
