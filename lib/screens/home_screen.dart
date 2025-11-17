@@ -1,26 +1,28 @@
+// lib/screens/home_screen.dart
+
 import 'package:anycall/screens/login_screen.dart';
 import 'package:anycall/screens/call_screen.dart';
 import 'package:anycall/screens/chat_history_screen.dart';
+import 'package:anycall/api_service.dart';
 import 'package:flutter/material.dart';
 
-// 1. 친구 데이터를 관리하기 위한 클래스
+// Friend 클래스
 class Friend {
   final String name;
   final String status;
   final Color statusColor;
   final String lastSeen;
-  final List<String> chatHistory; // 대화 기록 리스트
+  final List<String> chatHistory;
 
   Friend({
     required this.name,
     required this.status,
     required this.statusColor,
     required this.lastSeen,
-    required this.chatHistory, // 생성자에 추가
+    required this.chatHistory,
   });
 }
 
-// 2. StatefulWidget으로 변경
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -31,7 +33,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  // 3. 전체 친구 목록 (대화 기록 데이터 포함)
+  // 2. 사용자 이름과 로딩 상태를 위한 변수 추가
+  String _userName = "";
+  bool _isProfileLoading = true;
+
+  // 3. 친구 목록은 우선 기존 하드코딩된 데이터를 유지
   final List<Friend> _allFriends = [
     Friend(
       name: '원영', status: '온라인', statusColor: Colors.green, lastSeen: '마지막 접속: 방금 전',
@@ -51,14 +57,26 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
-  // 화면에 보여줄 필터링된 친구 목록
   List<Friend> _filteredFriends = [];
 
   @override
   void initState() {
     super.initState();
+    // 4. 친구 목록 로드 (기존) + 사용자 프로필 로드 (신규)
     _filteredFriends = _allFriends;
     _searchController.addListener(_filterFriends);
+    _loadUserProfile(); // <-- 사용자 이름 불러오기
+  }
+
+  // 5. 사용자 프로필을 불러오는 함수
+  Future<void> _loadUserProfile() async {
+    String? userName = await ApiService.getUserProfile();
+    if (mounted) { // 화면이 사라지지 않았다면
+      setState(() {
+        _userName = userName ?? "사용자"; // 이름이 없으면 "사용자"
+        _isProfileLoading = false;
+      });
+    }
   }
 
   @override
@@ -67,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // 검색어에 따라 친구 목록을 필터링하는 함수
+  // 검색 필터 함수
   void _filterFriends() {
     String query = _searchController.text.toLowerCase();
     setState(() {
@@ -84,33 +102,29 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
-        leading: const Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Center(
-            child: Text('AI 전화', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          ),
-        ),
-        leadingWidth: 100,
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined)),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
-            icon: const Icon(Icons.logout_outlined),
-          ),
-        ],
-      ),
+      appBar: AppBar( /* ... (AppBar 변경 없음) ... */ ),
       backgroundColor: Colors.white,
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          // --- 6. 환영 문구 추가 ---
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: _isProfileLoading
+                ? const Center(child: CircularProgressIndicator()) // 로딩 중
+                : Text(
+              '$_userName님, 안녕하세요?',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10), // 환영 문구와 검색창 사이 간격
+          // ----------------------
+
+          // 검색창
           TextField(
             controller: _searchController,
             style: const TextStyle(color: Colors.black),
@@ -127,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 20),
 
-          // '나' 타일은 Friend 객체를 직접 만들어서 전달
+          // '나' 타일
           _buildFriendTile(
             context: context,
             friend: Friend(
@@ -135,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
               status: '온라인',
               statusColor: Colors.green,
               lastSeen: 'AI와 대화할 준비가 되었습니다',
-              chatHistory: [], // '나'는 대화 기록 없음
+              chatHistory: [],
             ),
             isMe: true,
           ),
@@ -147,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 10),
 
-          // .map() 에서 friend 객체 전체를 _buildFriendTile로 전달
+          // 친구 목록
           ..._filteredFriends.map((friend) => _buildFriendTile(
             context: context,
             friend: friend,
@@ -157,7 +171,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Friend 객체를 통째로 받도록 수정된 함수
   Widget _buildFriendTile({
     required BuildContext context,
     required Friend friend,
@@ -202,7 +215,6 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           IconButton(
             onPressed: () {
-              // ChatHistoryScreen으로 이동하며 friend 객체 전달
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -213,14 +225,27 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.chat_bubble_outline, color: Colors.grey),
           ),
           IconButton(
-            onPressed: () {
-              // CallScreen으로 이동하며 친구 이름 전달
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CallScreen(friendName: friend.name),
-                ),
-              );
+            onPressed: () async {
+              // 7. 통화 시작 API (participantName 전달)
+              String? sessionId = await ApiService.startCall(friend.name);
+
+              if (sessionId != null) {
+                if (!context.mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CallScreen(
+                      friendName: friend.name,
+                      sessionId: sessionId,
+                    ),
+                  ),
+                );
+              } else {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('통화 서버에 연결할 수 없습니다.')),
+                );
+              }
             },
             icon: const Icon(Icons.call_outlined, color: Colors.green),
           ),
