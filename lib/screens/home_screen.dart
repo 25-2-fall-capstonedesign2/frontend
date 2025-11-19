@@ -70,10 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 5. 사용자 프로필을 불러오는 함수
   Future<void> _loadUserProfile() async {
-    String? userName = await ApiService.getUserProfile();
+    // String? userName = await ApiService.getUserProfile();
     if (mounted) { // 화면이 사라지지 않았다면
       setState(() {
-        _userName = userName ?? "사용자"; // 이름이 없으면 "사용자"
+        _userName = "사용자"; // 이름이 없으면 "사용자"
         _isProfileLoading = false;
       });
     }

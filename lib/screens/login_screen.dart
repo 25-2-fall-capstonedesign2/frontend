@@ -48,7 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // --- 3. 로그인 버튼 API 연동 로직 ---
   void _handleLogin() async {
-    if (_phoneController.text.isEmpty || _passwordController.text.isEmpty) {
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (phone.isEmpty || password.isEmpty) {
       _showErrorDialog('전화번호와 비밀번호를 모두 입력해주세요.');
       return;
     }
@@ -56,8 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _isLoading = true; });
 
     final result = await ApiService.login(
-      _phoneController.text,
-      _passwordController.text,
+      phone,
+      password,
     );
 
     setState(() { _isLoading = false; });
@@ -103,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: '전화번호', // UI 텍스트 변경
                       labelStyle: TextStyle(color: Colors.grey[400]),
                       filled: true,
-                      fillColor: Colors.black.withOpacity(0.3),
+                      fillColor: Colors.black,
                       enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white70)),
                       focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
                     ),
@@ -120,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: '비밀번호',
                       labelStyle: TextStyle(color: Colors.grey[400]),
                       filled: true,
-                      fillColor: Colors.black.withOpacity(0.3),
+                      fillColor: Colors.black,
                       enabledBorder: const OutlineInputBorder(
                         borderSide: BorderSide(color: Colors.white70),
                       ),
