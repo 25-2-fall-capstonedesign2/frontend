@@ -4,36 +4,37 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <-- 👈 패키지 변경
 
 class ApiService {
   // 서버 주소 (HTTPS로 변경, 표준 포트 443 사용)
   static const String _baseUrl = 'https://anycall.store';
-  static const _storage = FlutterSecureStorage();
+  // static const _storage = FlutterSecureStorage(); // <-- 제거
 
-  // --- SSL 인증서 검증을 무시하는 HTTP Client 생성 ---
+  // --- SSL 인증서 검증을 무시하는 HTTP Client 생성 (동일) ---
   static http.Client createInsecureHttpClient() {
     final client = HttpClient()
       ..badCertificateCallback =
-      ((X509Certificate cert, String host, int port) => true); // 항상 true 반환하여 인증서 무시
+      ((X509Certificate cert, String host, int port) => true);
     return IOClient(client);
   }
 
-  // --- 토큰 관리 ---
+  // --- 토큰 관리 (shared_preferences 사용) ---
   static Future<void> _saveToken(String token) async {
-    await _storage.write(key: 'jwt_token', value: token);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('jwt_token', token);
   }
 
   static Future<String?> _getToken() async {
-    return await _storage.read(key: 'jwt_token');
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('jwt_token');
   }
 
-  // --- (DisplayName 저장 함수 제거) ---
-
-  // 로그아웃은 토큰만 제거
+  // [DisplayName 관련 함수 제거되었으므로, logout 함수도 수정합니다.]
   static Future<void> logout() async {
-    await _storage.delete(key: 'jwt_token');
-    await _storage.delete(key: 'user_name'); // 기존에 user_name도 삭제하던 코드는 유지
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('jwt_token');
+    await prefs.remove('user_name'); // 혹시 모를 잔여 데이터 삭제
   }
 
   static Future<Map<String, String>> _getAuthHeaders() async {
@@ -47,13 +48,6 @@ class ApiService {
   // --- 4. 회원가입 API ---
   static Future<Map<String, dynamic>> signup(String phone, String password, String displayName) async {
     final client = createInsecureHttpClient();
-
-    print('>>> [API_CALL] 회원가입 요청 데이터: ${jsonEncode({
-      'phone': phone,
-      'password': password,
-      'displayName': displayName,
-    })}');
-
     try {
       final response = await client.post(
         Uri.parse('$_baseUrl/api/auth/signup'),
@@ -65,7 +59,6 @@ class ApiService {
         }),
       );
 
-      print("Raw Response Body: '${response.body}'");
       final body = jsonDecode(response.body);
       print('회원가입 요청 상태 코드: ${response.statusCode}');
 
@@ -86,12 +79,6 @@ class ApiService {
   // --- 5. 로그인 API (토큰만 저장) ---
   static Future<Map<String, dynamic>> login(String phone, String password) async {
     final client = createInsecureHttpClient();
-
-    print('>>> [API_CALL] 로그인 요청 데이터: ${jsonEncode({
-      'phone': phone,
-      'password': password,
-    })}');
-
     try {
       final response = await client.post(
         Uri.parse('$_baseUrl/api/auth/login'),
@@ -107,12 +94,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         String token = body['token'];
-
-        // print('>>> [DEBUG] 로그인 성공 - 수신된 JWT 토큰: $token');
-
-        await _saveToken(token); // 토큰만 저장
-        // displayName 로직 제거
-        return {'success': true}; // 토큰 저장 후 성공만 반환
+        await _saveToken(token); // shared_preferences 함수 사용
+        return {'success': true};
       } else {
         return {'success': false, 'message': body['message'] ?? '로그인에 실패했습니다.'};
       }
@@ -124,7 +107,7 @@ class ApiService {
     }
   }
 
-  // --- 6. 통화 시작 API (변경 없음) ---
+  // --- 6. 통화 시작 API ---
   static Future<String?> startCall(String participantName) async {
     final client = createInsecureHttpClient();
     try {
@@ -149,7 +132,7 @@ class ApiService {
     }
   }
 
-  // --- 7. 통화 종료 API (변경 없음) ---
+  // --- 7. 통화 종료 API ---
   static Future<void> hangUp(String sessionId) async {
     final client = createInsecureHttpClient();
     try {
@@ -164,9 +147,7 @@ class ApiService {
     }
   }
 
-  // --- 8. 프로필 조회 API (제거됨 - 미지원 기능) ---
-
-  // --- 9. 통화 대상 목록 조회 API (변경 없음) ---
+  // --- 8. 프로필 및 히스토리 API (변경 없음, 토큰 사용) ---
   static Future<List<String>> getParticipants() async {
     final client = createInsecureHttpClient();
     try {
@@ -188,7 +169,6 @@ class ApiService {
     }
   }
 
-  // --- 10. 메시지 내역 조회 API (변경 없음) ---
   static Future<List<Map<String, dynamic>>> getMessages(String participantName) async {
     final client = createInsecureHttpClient();
     try {
