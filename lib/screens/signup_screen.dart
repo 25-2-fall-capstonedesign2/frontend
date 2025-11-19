@@ -59,12 +59,16 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0B1740),
-      appBar: AppBar( /* ... (동일) ... */ ),
+      appBar: AppBar(
+        title: const Text('회원가입'),
+        backgroundColor: Colors.transparent, // 배경과 어우러지도록 투명하게
+        elevation: 0, // 그림자 제거
+        foregroundColor: Colors.white, // 아이콘 및 텍스트 흰색으로
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40.0),
