@@ -29,7 +29,6 @@ class _CallScreenState extends State<CallScreen> {
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
   final FlutterSoundPlayer _player = FlutterSoundPlayer();
 
-  // --- 1. 오디오 데이터를 위한 별도의 StreamController 선언 ---
   StreamController<Uint8List>? _audioDataController;
   StreamSubscription<Uint8List>? _audioDataSubscription;
   StreamSubscription? _webSocketSubscription;
@@ -46,20 +45,16 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _initializeAudioAndConnect() async {
     var status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
-      Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
       return;
     }
 
     await _recorder.openRecorder();
     await _player.openPlayer();
 
-    // --- 2. 오디오 데이터 스트림 컨트롤러 초기화 ---
     _audioDataController = StreamController<Uint8List>();
-
-    // --- 3. 오디오 스트림을 WebSocket으로 보내는 리스너 연결 ---
     _audioDataSubscription = _audioDataController!.stream.listen((Uint8List audioChunk) {
       if (audioChunk != null && _isConnected) {
-        // audioChunk는 Uint8List입니다. 바로 전송합니다.
         _channel?.sink.add(audioChunk);
       }
     });
@@ -78,7 +73,9 @@ class _CallScreenState extends State<CallScreen> {
 
   void _connectWebSocket() {
     try {
-      String wsUrl = 'ws://ec2-3-104-116-91.ap-southeast-2.compute.amazonaws.com:8080/ws-client?sessionId=${widget.sessionId}';
+      // API 명세서 Base URL (https://anycall.store)에 맞춰 WSS 프로토콜 사용
+      const String wsHost = 'anycall.store';
+      String wsUrl = 'wss://$wsHost/ws-client?sessionId=${widget.sessionId}';
 
       _channel = IOWebSocketChannel.connect(wsUrl);
       setState(() { _isConnected = true; });
@@ -103,11 +100,8 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _startStreamingAudio() {
-    // onProgress 리스너를 제거합니다. (오디오 데이터와 무관)
-
-    // --- 4. 녹음기 데이터를 StreamController의 'sink'로 보냅니다 ---
     _recorder.startRecorder(
-      toStream: _audioDataController!.sink, // <-- 여기가 핵심입니다
+      toStream: _audioDataController!.sink,
       codec: _codec,
       numChannels: 1,
       sampleRate: _sampleRate,
@@ -115,12 +109,11 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _handleHangUp({bool isRemote = false}) async {
-    // --- 5. 모든 스트림과 컨트롤러를 닫습니다 ---
     await _audioDataSubscription?.cancel();
     await _webSocketSubscription?.cancel();
     await _recorder.stopRecorder();
     await _player.stopPlayer();
-    await _audioDataController?.close(); // 컨트롤러 닫기
+    await _audioDataController?.close();
     _channel?.sink.close();
 
     setState(() { _isConnected = false; });
@@ -138,13 +131,12 @@ class _CallScreenState extends State<CallScreen> {
   void dispose() {
     _recorder.closeRecorder();
     _player.closePlayer();
-    _handleHangUp(); // dispose에서 모든 것을 정리
+    _handleHangUp();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // UI 부분은 변경사항 없습니다.
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
