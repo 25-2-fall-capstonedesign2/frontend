@@ -118,6 +118,9 @@ class ApiService {
           'participantName': participantName
         }),
       );
+
+      print('통화 시작 상태 코드: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         String sessionId = jsonDecode(response.body)['callSessionId'].toString();
         return sessionId;
@@ -147,7 +150,7 @@ class ApiService {
     }
   }
 
-  // --- 8. 프로필 및 히스토리 API (변경 없음, 토큰 사용) ---
+  // --- 8. 통화 대상 목록 조회 API ---
   static Future<List<String>> getParticipants() async {
     final client = createInsecureHttpClient();
     try {
@@ -155,7 +158,11 @@ class ApiService {
         Uri.parse('$_baseUrl/api/v1/history/participants'),
         headers: await _getAuthHeaders(),
       );
+
+      print('통화 대상 목록 조회 상태 코드: ${response.statusCode}');
+
       if (response.statusCode == 200) {
+        // UTF-8로 디코딩
         List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
         return data.cast<String>();
       } else {

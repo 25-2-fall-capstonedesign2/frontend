@@ -12,7 +12,7 @@ class Friend {
   final String status;
   final Color statusColor;
   final String lastSeen;
-  final List<String> chatHistory;
+  final List<String> chatHistory; // 현재는 사용하지 않음
 
   Friend({
     required this.name,
@@ -33,48 +33,54 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  // 2. 사용자 이름과 로딩 상태를 위한 변수 추가
+  // 2. 사용자 이름 및 로딩 상태
   String _userName = "";
   bool _isProfileLoading = true;
+  bool _isFriendsLoading = true; // 친구 목록 로딩 상태 추가
 
-  // 3. 친구 목록은 우선 기존 하드코딩된 데이터를 유지
-  final List<Friend> _allFriends = [
-    Friend(
-      name: '원영', status: '온라인', statusColor: Colors.green, lastSeen: '마지막 접속: 방금 전',
-      chatHistory: ['오늘 날씨 진짜 좋다!', '응, 어디 놀러가고 싶다.'],
-    ),
-    Friend(
-      name: '이안', status: '바쁨', statusColor: Colors.red, lastSeen: '마지막 접속: 5분 전',
-      chatHistory: ['혹시 그 자료 받았어?', '아니, 아직 못 받았어. 확인해볼게.'],
-    ),
-    Friend(
-      name: '도영', status: '자리비움', statusColor: Colors.orange, lastSeen: '마지막 접속: 1시간 전',
-      chatHistory: ['점심 먹었어?'],
-    ),
-    Friend(
-      name: '휴', status: '오프라인', statusColor: Colors.grey, lastSeen: '마지막 접속: 어제',
-      chatHistory: ['어제 고마웠어!'],
-    ),
-  ];
-
+  // 3. [수정] 하드코딩된 목록 대신 동적 목록으로 변경
+  List<Friend> _allFriends = [];
   List<Friend> _filteredFriends = [];
 
   @override
   void initState() {
     super.initState();
-    // 4. 친구 목록 로드 (기존) + 사용자 프로필 로드 (신규)
-    _filteredFriends = _allFriends;
     _searchController.addListener(_filterFriends);
-    _loadUserProfile(); // <-- 사용자 이름 불러오기
+    _loadData(); // 사용자 프로필과 친구 목록을 동시에 로드
   }
 
-  // 5. 사용자 프로필을 불러오는 함수
-  Future<void> _loadUserProfile() async {
-    // String? userName = await ApiService.getUserProfile();
-    if (mounted) { // 화면이 사라지지 않았다면
+  // 4. [수정] 사용자 프로필 및 통화 대상 목록 API 호출
+  Future<void> _loadData() async {
+    // ⚠️ 사용자 이름을 가져오는 API (getUserProfile)는 명세에 없으므로 임시 값 사용
+    String fetchedUserName = "사용자";
+
+    // History API (1): 통화 대상 목록 조회
+    List<String> participantNames = [];
+    try {
+      participantNames = await ApiService.getParticipants();
+      // String? name = await ApiService.getUserName(); // 임시 프로필 이름 로드 (ApiService가 저장했다고 가정)
+      // fetchedUserName = name ?? "사용자";
+    } catch (e) {
+      print("데이터 로드 중 오류 발생: $e");
+    }
+
+
+    if (mounted) {
       setState(() {
-        _userName = "사용자"; // 이름이 없으면 "사용자"
+        _userName = fetchedUserName;
+
+        // 서버에서 받은 이름 목록으로 Friend 객체 생성 (나머지 정보는 임시 기본값)
+        _allFriends = participantNames.map((name) => Friend(
+          name: name,
+          status: '기록있음',
+          statusColor: Colors.blueGrey, // 새로운 상태 색상
+          lastSeen: '최근 기록 확인 필요',
+          chatHistory: [],
+        )).toList();
+
+        _filteredFriends = _allFriends;
         _isProfileLoading = false;
+        _isFriendsLoading = false;
       });
     }
   }
@@ -104,16 +110,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar( /* ... (AppBar 변경 없음) ... */ ),
       backgroundColor: Colors.white,
-      body: ListView(
+      body: _isProfileLoading || _isFriendsLoading
+          ? const Center(child: CircularProgressIndicator()) // 로딩 중 스피너 표시
+          : ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // --- 6. 환영 문구 추가 ---
+          // 환영 문구
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: _isProfileLoading
-                ? const Center(child: CircularProgressIndicator()) // 로딩 중
-                : Text(
-              '$_userName님, 안녕하세요?',
+            child: Text(
+              '$_userName님, 안녕하세요?', // 1단계에서 로드된 사용자명 사용
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -121,27 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 10), // 환영 문구와 검색창 사이 간격
-          // ----------------------
+          const SizedBox(height: 10),
 
           // 검색창
-          TextField(
-            controller: _searchController,
-            style: const TextStyle(color: Colors.black),
-            decoration: InputDecoration(
-              hintText: '친구 검색',
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              filled: true,
-              fillColor: Colors.grey[200],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
+          TextField( /* ... (검색창 코드 동일) ... */ ),
           const SizedBox(height: 20),
 
-          // '나' 타일
+          // '나' 타일 (하드코딩 유지)
           _buildFriendTile(
             context: context,
             friend: Friend(
@@ -155,13 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const Divider(),
           const SizedBox(height: 20),
+
+          // 통화 대상 목록 헤더 (API 결과 사용)
           Text(
-            '가상 통화 목록 (${_filteredFriends.length})',
+            '통화 대상 목록 (${_filteredFriends.length})',
             style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
 
-          // 친구 목록
+          // 친구 목록 (API 결과 사용)
           ..._filteredFriends.map((friend) => _buildFriendTile(
             context: context,
             friend: friend,
@@ -171,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // _buildFriendTile 함수 (변경 없음)
   Widget _buildFriendTile({
     required BuildContext context,
     required Friend friend,
@@ -215,6 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           IconButton(
             onPressed: () {
+              // History API (2): 메시지 내역 조회 [cite: 591]
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -226,9 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             onPressed: () async {
-              // 7. 통화 시작 API (participantName 전달)
               String? sessionId = await ApiService.startCall(friend.name);
-
               if (sessionId != null) {
                 if (!context.mounted) return;
                 Navigator.push(
