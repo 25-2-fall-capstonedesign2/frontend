@@ -49,9 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData(); // 사용자 프로필과 친구 목록을 동시에 로드
   }
 
-  // 4. [수정] 사용자 프로필 및 통화 대상 목록 API 호출
+  // 4. 사용자 프로필 및 통화 대상 목록 API 호출
   Future<void> _loadData() async {
-    // ⚠️ 사용자 이름을 가져오는 API (getUserProfile)는 명세에 없으므로 임시 값 사용
+    // 사용자 이름을 가져오는 API (getUserProfile)는 명세에 없으므로 임시 값 사용
     String fetchedUserName = "사용자";
 
     // History API (1): 통화 대상 목록 조회
@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
         leading: const Padding(
           padding: EdgeInsets.all(8.0),
           child: Center(
-            child: Text('AI 전화', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            child: Text('Anycall', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
         ),
         leadingWidth: 100,
@@ -141,7 +141,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Text(
-              '$_userName님, 안녕하세요?', // 1단계에서 로드된 사용자명 사용
+              // '$_userName님, 안녕하세요?', // 1단계에서 로드된 사용자명 사용
+              '누구와 통화하시겠어요?',
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -156,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _searchController,
             style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
-              hintText: '친구 검색',
+              hintText: '목소리 검색',
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
               filled: true,
               fillColor: Colors.grey[200],
@@ -175,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
               name: '나',
               status: '온라인',
               statusColor: Colors.green,
-              lastSeen: 'AI와 대화할 준비가 되었습니다',
+              lastSeen: '목소리와 통화할 준비가 되었습니다',
               chatHistory: [],
             ),
             isMe: true,
@@ -185,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // 통화 대상 목록 헤더 (API 결과 사용)
           Text(
-            '통화 대상 목록 (${_filteredFriends.length})',
+            '목소리 목록 (${_filteredFriends.length})',
             style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
