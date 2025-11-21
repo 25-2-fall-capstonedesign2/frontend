@@ -169,7 +169,7 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                   IconButton(
                     onPressed: () => _handleHangUp(isRemote: false),
-                    icon: const Icon(Icons.call_end, color: Colors.red, size: 40),
+                    icon: const Icon(Icons.call_end, color: Colors.white, size: 40),
                     style: IconButton.styleFrom(
                         backgroundColor: Colors.red,
                         padding: const EdgeInsets.all(15)
