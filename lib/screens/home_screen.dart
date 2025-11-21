@@ -108,7 +108,29 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar( /* ... (AppBar 변경 없음) ... */ ),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+        leading: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Center(
+            child: Text('AI 전화', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ),
+        ),
+        leadingWidth: 100,
+        actions: [
+          IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined)),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+              );
+            },
+            icon: const Icon(Icons.logout_outlined),
+          ),
+        ],
+      ),
       backgroundColor: Colors.white,
       body: _isProfileLoading || _isFriendsLoading
           ? const Center(child: CircularProgressIndicator()) // 로딩 중 스피너 표시
@@ -130,7 +152,20 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
 
           // 검색창
-          TextField( /* ... (검색창 코드 동일) ... */ ),
+          TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.black),
+            decoration: InputDecoration(
+              hintText: '친구 검색',
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              filled: true,
+              fillColor: Colors.grey[200],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30.0),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
 
           // '나' 타일 (하드코딩 유지)
@@ -210,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           IconButton(
             onPressed: () {
-              // History API (2): 메시지 내역 조회 [cite: 591]
+              // History API (2): 메시지 내역 조회
               Navigator.push(
                 context,
                 MaterialPageRoute(

@@ -176,6 +176,7 @@ class ApiService {
     }
   }
 
+  // --- 9. 대화 기록 조회 API ---
   static Future<List<Map<String, dynamic>>> getMessages(String participantName) async {
     final client = createInsecureHttpClient();
     try {
@@ -183,6 +184,9 @@ class ApiService {
         Uri.parse('$_baseUrl/api/v1/history/messages?participantName=$participantName'),
         headers: await _getAuthHeaders(),
       );
+
+      print('대화 기록 조회 상태 코드: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
         return data.cast<Map<String, dynamic>>();
