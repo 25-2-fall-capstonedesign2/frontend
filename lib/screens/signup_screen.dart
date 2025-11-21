@@ -30,9 +30,27 @@ class _SignupScreenState extends State<SignupScreen> {
     final password = _passwordController.text;
     final displayName = _displayNameController.text;
 
+    // 1. 필수 항목 누락 검사
     if (phone.isEmpty || password.isEmpty || displayName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('모든 항목을 입력해주세요.')),
+      );
+      return;
+    }
+
+    // 2-1. 전화번호 형식 검사 (010으로 시작하는 11자리 숫자)
+    final phoneRegex = RegExp(r'^010\d{8}$'); // 010 + 8자리 숫자 = 11자리
+    if (!phoneRegex.hasMatch(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('전화번호 형식이 올바르지 않습니다. (010으로 시작하는 11자리 숫자)')),
+      );
+      return;
+    }
+
+    // 2-2. 비밀번호 길이 검사 (8자리 이상)
+    if (password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('비밀번호는 최소 8자리 이상이어야 합니다.')),
       );
       return;
     }
