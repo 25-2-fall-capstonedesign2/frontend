@@ -4,8 +4,10 @@ import 'package:anycall/screens/home_screen.dart';
 import 'package:anycall/screens/terms_screen.dart';
 import 'package:anycall/screens/privacy_policy_screen.dart';
 import 'package:anycall/screens/signup_screen.dart';
+import 'package:anycall/screens/intro_screen.dart';
 import 'package:anycall/api_service.dart'; // ApiService import
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -69,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (result['success'] == true) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const IntroScreen()),
       );
     } else {
       // API 명세서의 401 Unauthorized 메시지
@@ -184,7 +186,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const Spacer(flex: 1),
 
-                  // 7. 약관 버튼들
+                  // 7. 종료 버튼 추가 및 약관 링크 위로 Spacer 이동
+                  FractionallySizedBox(
+                    widthFactor: 0.4, // 너비 40%
+                    child: ElevatedButton(
+                      onPressed: () {
+                        exit(0); // 앱 종료 기능
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('종료', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 8. 약관 버튼들
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
