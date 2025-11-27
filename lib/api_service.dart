@@ -110,23 +110,26 @@ class ApiService {
   }
 
   // --- 6. 통화 시작 API ---
-  static Future<String?> startCall(String participantName) async {
+  static Future<String?> startCall(int voiceProfileId) async {
     final client = createInsecureHttpClient();
     try {
       final response = await client.post(
         Uri.parse('$_baseUrl/api/calls/start'),
         headers: await _getAuthHeaders(),
         body: jsonEncode({
-          'participantName': participantName
+          'voiceProfileId': voiceProfileId // 백엔드 DTO에 맞춰 ID 전송
         }),
       );
 
-      print('통화 시작 상태 코드: ${response.statusCode}');
+      print('로그인 요청 상태 코드: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        String sessionId = jsonDecode(response.body)['callSessionId'].toString();
-        return sessionId;
+        // 응답: {"callSessionId": 123}
+        final body = jsonDecode(response.body);
+        // callSessionId가 int일 수도 있고 String일 수도 있으니 toString()으로 안전하게 변환
+        return body['callSessionId'].toString();
       } else {
+        print('통화 시작 실패: ${response.body}');
         return null;
       }
     } catch (e) {
@@ -201,6 +204,48 @@ class ApiService {
       return [];
     } finally {
       client.close();
+    }
+  }
+
+  // --- 10. 목소리 추가 API ---
+  static Future<bool> uploadVoiceProfile(String profileName, File file) async {
+    try {
+      final token = await _getToken();
+
+      // Multipart 요청 생성
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/api/voice-profiles'), //
+      );
+
+      // 헤더 설정 (Authorization)
+      request.headers['Authorization'] = 'Bearer $token';
+      // Content-Type은 MultipartRequest가 자동으로 설정합니다.
+
+      // 1. 이름 필드 추가 (@RequestParam("profileName"))
+      request.fields['profileName'] = profileName;
+
+      // 2. 파일 필드 추가 (@RequestParam("file"))
+      var multipartFile = await http.MultipartFile.fromPath(
+        'file',
+        file.path,
+      );
+      request.files.add(multipartFile);
+
+      // 전송
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        print("업로드 성공: ${response.body}");
+        return true;
+      } else {
+        print("업로드 실패: ${response.statusCode} - ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("파일 업로드 중 오류 발생: $e");
+      return false;
     }
   }
 }

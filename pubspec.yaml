@@ -43,6 +43,7 @@ dependencies:
   record: ^6.1.2
   just_audio: ^0.10.5
   speech_to_text: ^7.4.0-beta.6
+  file_picker: ^10.3.7
 
 dev_dependencies:
   flutter_test:

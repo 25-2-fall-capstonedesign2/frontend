@@ -4,11 +4,13 @@ import 'package:anycall/screens/login_screen.dart';
 import 'package:anycall/screens/call_screen.dart';
 import 'package:anycall/screens/chat_history_screen.dart';
 import 'package:anycall/api_service.dart';
-import 'package:anycall/models/voice_profile.dart'; // VoiceProfile 모델 import 필수
+import 'package:anycall/models/voice_profile.dart';
 import 'package:flutter/material.dart';
+import 'package:anycall/screens/upload_voice_screen.dart';
 
 // Friend 클래스 (UI용 데이터 모델)
 class Friend {
+  final int id; // [추가] 목소리 프로필 ID (통화 연결용)
   final String name;
   final String status;
   final Color statusColor;
@@ -16,6 +18,7 @@ class Friend {
   final List<String> chatHistory;
 
   Friend({
+    required this.id, // [추가]
     required this.name,
     required this.status,
     required this.statusColor,
@@ -51,15 +54,13 @@ class _HomeScreenState extends State<HomeScreen> {
   // 데이터 로드 함수
   Future<void> _loadData() async {
     String fetchedUserName = "사용자";
-
-    // 1. [수정] 타입 불일치 해결: List<String>이 아닌 List<VoiceProfile>로 받음
     List<VoiceProfile> profiles = [];
 
     try {
-      // 목소리 프로필 목록 조회 (getVoiceProfiles 사용)
+      // 목소리 프로필 목록 조회
       profiles = await ApiService.getVoiceProfiles();
 
-      // 사용자 이름 조회 (옵션)
+      // 사용자 이름 조회 (API가 있다면 주석 해제)
       // String? name = await ApiService.getUserName();
       // fetchedUserName = name ?? "사용자";
     } catch (e) {
@@ -70,12 +71,13 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _userName = fetchedUserName;
 
-        // 2. [수정] VoiceProfile 데이터를 Friend 객체로 변환
+        // [수정] VoiceProfile 데이터를 Friend 객체로 변환 (ID 포함)
         _allFriends = profiles.map((profile) => Friend(
-          name: profile.profileName, // VoiceProfile의 profileName을 사용
+          id: profile.id, // [중요] ID 매핑
+          name: profile.profileName,
           status: '통화가능',
           statusColor: Colors.blueGrey,
-          lastSeen: '터치하여 통화 또는 대화 기록 열람',
+          lastSeen: '터치하여 통화 또는 채팅',
           chatHistory: [],
         )).toList();
 
@@ -130,6 +132,23 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Anycall', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
         centerTitle: false,
         actions: [
+          IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined)),
+          IconButton(
+            onPressed: _handleLogout,
+            icon: const Icon(Icons.logout_outlined),
+          ),
+
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UploadVoiceScreen()),
+              );
+            },
+            icon: const Icon(Icons.add, size: 28), // + 아이콘
+            tooltip: '목소리 추가',
+          ),
+
           IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined)),
           IconButton(
             onPressed: _handleLogout,
@@ -232,9 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  // 3. [수정] ChatHistoryScreen은 friendName을 받도록 수정됨
-                  // 기존: builder: (context) => ChatHistoryScreen(friend: friend), (X)
-                  // 수정: builder: (context) => ChatHistoryScreen(friendName: friend.name), (O)
                   builder: (context) => ChatHistoryScreen(friendName: friend.name),
                 ),
               );
@@ -243,12 +259,15 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: '채팅 기록',
           ),
           IconButton(
+            // [수정] 통화 버튼 로직
             onPressed: () async {
-              String? sessionId = await ApiService.startCall(friend.name);
+              // 1. 서버에 통화 시작 요청 (friend.id 전송)
+              String? sessionId = await ApiService.startCall(friend.id);
 
               if (!context.mounted) return;
 
               if (sessionId != null) {
+                // 2. 성공 시 CallScreen으로 이동 (sessionId 전달)
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -259,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
               } else {
+                // 3. 실패 시 에러 메시지
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('통화 서버에 연결할 수 없습니다.')),
                 );
