@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <-- 👈 패키지 변경
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:anycall/models/voice_profile.dart';
+import 'package:anycall/models/chat_message.dart';
 
 class ApiService {
   // 서버 주소 (HTTPS로 변경, 표준 포트 443 사용)
@@ -151,25 +153,23 @@ class ApiService {
   }
 
   // --- 8. 통화 대상 목록 조회 API ---
-  static Future<List<String>> getParticipants() async {
+  static Future<List<VoiceProfile>> getVoiceProfiles() async {
     final client = createInsecureHttpClient();
     try {
       final response = await client.get(
-        Uri.parse('$_baseUrl/api/v1/history/participants'),
+        Uri.parse('$_baseUrl/api/voice-profiles/me'),
         headers: await _getAuthHeaders(),
       );
 
-      print('통화 대상 목록 조회 상태 코드: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        // UTF-8로 디코딩
         List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data.cast<String>();
+        return data.map((json) => VoiceProfile.fromJson(json)).toList();
       } else {
+        print('목소리 목록 조회 실패: ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('통화 대상 목록 조회 실패: $e');
+      print('목소리 목록 조회 오류: $e');
       return [];
     } finally {
       client.close();
@@ -177,24 +177,27 @@ class ApiService {
   }
 
   // --- 9. 대화 기록 조회 API ---
-  static Future<List<Map<String, dynamic>>> getMessages(String participantName) async {
+  static Future<List<ChatMessage>> getMessages(String profileName) async {
     final client = createInsecureHttpClient();
     try {
+      // 쿼리 파라미터 생성
+      final uri = Uri.parse('$_baseUrl/api/v1/history/messages')
+          .replace(queryParameters: {'profileName': profileName});
+
       final response = await client.get(
-        Uri.parse('$_baseUrl/api/v1/history/messages?participantName=$participantName'),
+        uri,
         headers: await _getAuthHeaders(),
       );
 
-      print('대화 기록 조회 상태 코드: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data.cast<Map<String, dynamic>>();
+        return data.map((json) => ChatMessage.fromJson(json)).toList();
       } else {
+        print('메시지 내역 조회 실패: ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('메시지 내역 조회 실패: $e');
+      print('메시지 내역 조회 오류: $e');
       return [];
     } finally {
       client.close();
