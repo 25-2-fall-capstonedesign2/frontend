@@ -1,26 +1,72 @@
-import 'package:anycall/screens/home_screen.dart'; // Friend 클래스를 사용하기 위해 import
+// lib/screens/chat_history_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:anycall/api_service.dart';
+import 'package:anycall/models/chat_message.dart';
 
-class ChatHistoryScreen extends StatelessWidget {
-  // 어떤 친구의 대화 기록인지 받기 위해 Friend 객체를 전달받음
-  final Friend friend;
+class ChatHistoryScreen extends StatefulWidget {
+  final String friendName; // 백엔드의 'profileName'에 해당
 
-  const ChatHistoryScreen({super.key, required this.friend});
+  const ChatHistoryScreen({super.key, required this.friendName});
+
+  @override
+  State<ChatHistoryScreen> createState() => _ChatHistoryScreenState();
+}
+
+class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
+  late Future<List<ChatMessage>> _messagesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // API 호출 (friendName을 profileName 파라미터로 전달)
+    _messagesFuture = ApiService.getMessages(widget.friendName);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${friend.name}님과의 대화'), // 앱 바 제목에 친구 이름 표시
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-      ),
-      body: ListView.builder(
-        itemCount: friend.chatHistory.length, // 대화 기록 개수만큼 목록 생성
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(friend.chatHistory[index]), // 각 대화 내용을 텍스트로 표시
-            contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      appBar: AppBar(title: Text("${widget.friendName}님과의 대화")),
+      body: FutureBuilder<List<ChatMessage>>(
+        future: _messagesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("오류 발생: ${snapshot.error}"));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text("대화 기록이 없습니다."));
+          }
+
+          final messages = snapshot.data!;
+          return ListView.builder(
+            itemCount: messages.length,
+            itemBuilder: (context, index) {
+              final msg = messages[index];
+              final isMe = msg.sender == "USER"; // 보낸 사람이 나인지 확인
+
+              return Align(
+                alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isMe ? Colors.blue[100] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(msg.content, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text(msg.timestamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
