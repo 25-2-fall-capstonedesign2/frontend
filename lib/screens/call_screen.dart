@@ -193,6 +193,7 @@ class _CallScreenState extends State<CallScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const Spacer(flex: 1),
               const CircleAvatar(
                 radius: 60,
                 backgroundColor: Colors.grey,
@@ -217,6 +218,8 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ),
               const Spacer(),
+
+              const Spacer(flex: 2),
 
               // --- 버튼 UI ---
               Row(
