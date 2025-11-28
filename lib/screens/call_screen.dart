@@ -3,11 +3,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:anycall/api_service.dart';
 
-// [패키지] record와 just_audio를 사용합니다.
 import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -28,21 +28,28 @@ class CallScreen extends StatefulWidget {
 class _CallScreenState extends State<CallScreen> {
   IOWebSocketChannel? _channel;
   bool _isConnected = false;
-  bool _isRecording = false; // 녹음 상태
-  bool _isSending = false; // 전송/AI 처리 중 상태
-  bool _isSystemReady = false; // 시스템 준비 상태
+  bool _isRecording = false;
+  bool _isSending = false;
 
-  // [오디오 인스턴스]
+  // 시스템 준비 상태
+  bool _isSystemReady = false;
+
+  // 녹음기 해제 여부 플래그
+  bool _isRecorderDisposed = false;
+
+  // [송신] 녹음 데이터를 로컬에 모아둘 버퍼
+  List<Uint8List> _audioBuffer = [];
+
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _player = AudioPlayer();
 
-  // [순수 이진 데이터 버퍼] 녹음 데이터를 로컬에 임시 저장할 버퍼
-  List<Uint8List> _audioBuffer = [];
+  // [수신] 오디오 재생을 위한 수동 큐(Queue)와 재생 상태 변수
+  final List<Uint8List> _audioQueue = [];
+  bool _isPlayingAudio = false;
 
   StreamSubscription<Uint8List>? _audioDataSubscription;
   StreamSubscription? _webSocketSubscription;
 
-  // [서버 명세] 32kHz, 16bit PCM
   static const int _sampleRate = 32000;
   static const int _numChannels = 1;
 
@@ -52,21 +59,16 @@ class _CallScreenState extends State<CallScreen> {
     _initializeAudioAndConnect();
   }
 
-  // 1. 오디오 초기화 및 WebSocket 연결
   Future<void> _initializeAudioAndConnect() async {
-    // [권한 체크] record가 권한을 요청하고 승인되지 않으면 종료
     if (!await _recorder.hasPermission()) {
       if (mounted) Navigator.of(context).pop();
       return;
     }
-
-    // [자원 열기]
     _connectWebSocket();
   }
 
   void _connectWebSocket() {
     try {
-      // WSS 주소 (anycall.store) 사용
       const String wsHost = 'anycall.store';
       String wsUrl = 'wss://$wsHost/ws-client?sessionId=${widget.sessionId}';
 
@@ -74,13 +76,15 @@ class _CallScreenState extends State<CallScreen> {
       if (mounted) setState(() { _isConnected = true; });
 
       _webSocketSubscription = _channel!.stream.listen(
-        (message) {
-          // 2. [수신 및 재생] 서버에서 AI 응답을 받으면 재생
+            (message) {
           if (message is List<int>) {
-            _player.setAudioSource(AudioSource.uri(
-              Uri.dataFromBytes(Uint8List.fromList(message), mimeType: 'audio/pcm'),
-            ));
-            _player.play();
+            print("📥 오디오 데이터 수신: ${message.length} bytes");
+
+            // [재생 로직] 수신된 PCM 데이터에 헤더를 붙여 큐에 넣고 재생 처리
+            final wavData = _addWavHeader(message);
+            _audioQueue.add(wavData);
+            _processAudioQueue();
+
           } else {
             print("서버 텍스트 메시지: $message");
             try {
@@ -88,22 +92,32 @@ class _CallScreenState extends State<CallScreen> {
               if (data['type'] == 'system' && data['event'] == 'ready') {
                 if (mounted) {
                   setState(() {
-                    _isSystemReady = true; // 시스템 준비 완료 -> 버튼 활성화
+                    _isSystemReady = true;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("AI 연결 완료! 이제 대화를 시작하세요.")),
+                    const SnackBar(content: Text("AI 연결 완료! 대화를 시작하세요.")),
                   );
                 }
               }
             } catch (e) {
-              print("JSON 파싱 오류 (무시됨): $e");
+              // JSON 파싱 에러 무시
             }
           }
         },
-        onDone: () => _handleHangUp(isRemote: true),
+        onDone: () {
+          print("WebSocket 연결이 종료되었습니다.");
+          if (mounted) {
+            setState(() { _isConnected = false; });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("서버와의 연결이 종료되었습니다.")),
+            );
+          }
+        },
         onError: (error) {
           print('WebSocket 오류: $error');
-          _handleHangUp(isRemote: true);
+          if (mounted) {
+            setState(() { _isConnected = false; });
+          }
         },
       );
     } catch (e) {
@@ -111,29 +125,113 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  // 3. [녹음 시작] 함수
-  void _startRecording() async {
-    if (_isRecording || _isSending || !_isConnected) return;
+  // [수정] 오디오 큐 처리 함수 (임시 파일 저장 후 재생)
+  Future<void> _processAudioQueue() async {
+    if (_isPlayingAudio || _audioQueue.isEmpty) return;
 
-    _audioBuffer.clear(); // 이전 녹음 데이터 초기화
+    _isPlayingAudio = true;
 
-    // [Fix] Future<Stream>을 await로 기다렸다가 .listen을 호출해야 합니다.
-    _audioDataSubscription = (await _recorder.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits, // Raw PCM 16bit (오류 해결)
-          sampleRate: _sampleRate,
-          numChannels: _numChannels,
-        )
-    )).listen((Uint8List audioChunk) { // StreamSubscription<Uint8List>에 할당
-      if (mounted) {
-        _audioBuffer.add(audioChunk); // 로컬 버퍼에 저장
+    try {
+      while (_audioQueue.isNotEmpty) {
+        final wavData = _audioQueue.removeAt(0);
+
+        // 1. 임시 파일 생성 (고유한 이름 사용)
+        final tempDir = Directory.systemTemp;
+        final tempFile = File('${tempDir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.wav');
+
+        // 2. 파일에 데이터 쓰기
+        await tempFile.writeAsBytes(wavData);
+
+        // 3. 파일 경로로 재생 (Data URI 대신 File Path 사용)
+        await _player.setFilePath(tempFile.path);
+        _player.play();
+
+        // 4. 재생이 끝날 때까지 대기
+        await _player.playerStateStream.firstWhere(
+                (state) => state.processingState == ProcessingState.completed
+        );
+
+        // 5. 재생 완료 후 파일 삭제 (청소)
+        try {
+          if (await tempFile.exists()) {
+            await tempFile.delete();
+          }
+        } catch (e) {
+          print("임시 파일 삭제 실패: $e");
+        }
       }
-    });
-
-    if (mounted) setState(() { _isRecording = true; });
+    } catch (e) {
+      print("오디오 재생 중 오류: $e");
+    } finally {
+      _isPlayingAudio = false;
+    }
   }
 
-  // 4. [보내기/전송] 함수
+  // [수정됨] Raw PCM 데이터에 WAV 헤더를 추가하는 함수
+  Uint8List _addWavHeader(List<int> pcmData) {
+    var channels = 1;
+    var sampleRate = 32000;
+    var byteRate = 16 * sampleRate * channels ~/ 8;
+    var dataSize = pcmData.length;
+    var totalSize = 36 + dataSize;
+
+    final header = Uint8List(44);
+    final view = ByteData.view(header.buffer);
+
+    // RIFF header
+    header.setRange(0, 4, [82, 73, 70, 70]); // "RIFF"
+    view.setUint32(4, totalSize, Endian.little);
+    header.setRange(8, 12, [87, 65, 86, 69]); // "WAVE"
+
+    // fmt subchunk
+    header.setRange(12, 16, [102, 109, 116, 32]); // "fmt "
+    view.setUint32(16, 16, Endian.little);
+    view.setUint16(20, 1, Endian.little);
+    view.setUint16(22, channels, Endian.little);
+    view.setUint32(24, sampleRate, Endian.little);
+    view.setUint32(28, byteRate, Endian.little);
+    view.setUint16(32, (channels * 16) ~/ 8, Endian.little);
+    view.setUint16(34, 16, Endian.little);
+
+    // data subchunk
+    // [수정] 기존: setRange(36, 4, ...) -> 수정: setRange(36, 40, ...)
+    // 시작 인덱스가 36이고 길이가 4이므로, 끝 인덱스는 40이어야 합니다.
+    header.setRange(36, 40, [100, 97, 116, 97]); // "data"
+    view.setUint32(40, dataSize, Endian.little);
+
+    var wavFile = BytesBuilder();
+    wavFile.add(header);
+    wavFile.add(pcmData);
+    return wavFile.toBytes();
+  }
+
+  void _startRecording() async {
+    // 3. [수정] 준비되지 않았으면 시작 불가
+    if (_isRecording || _isSending || !_isConnected || !_isSystemReady) return;
+
+    _audioBuffer.clear();
+
+    try {
+      if (_isRecorderDisposed) return;
+
+      _audioDataSubscription = (await _recorder.startStream(
+          const RecordConfig(
+            encoder: AudioEncoder.pcm16bits,
+            sampleRate: _sampleRate,
+            numChannels: _numChannels,
+          )
+      )).listen((Uint8List audioChunk) {
+        if (mounted) {
+          _audioBuffer.add(audioChunk);
+        }
+      });
+
+      if (mounted) setState(() { _isRecording = true; });
+    } catch (e) {
+      print("녹음 시작 실패: $e");
+    }
+  }
+
   void _sendAudio() async {
     if (!_isRecording || _isSending) return;
 
@@ -156,15 +254,19 @@ class _CallScreenState extends State<CallScreen> {
       fullAudioData.setAll(offset, chunk);
       offset += chunk.length;
     }
-    _audioBuffer.clear();
+    _audioBuffer.clear(); // 버퍼 메모리 해제
 
-    // WebSocket 전송 및 VAD 신호 전송
+    // WebSocket 전송
     if (_isConnected) {
+      // 1. 순수 음성 데이터만 전송
       _channel?.sink.add(fullAudioData);
-      _channel?.sink.add(jsonEncode({'type': 'vad', 'state': 'silence'}));
+
+      // [삭제] 서버가 텍스트를 받으면 연결을 끊으므로 이 줄은 삭제
+      // _channel?.sink.add(jsonEncode({'type': 'vad', 'state': 'silence'}));
     }
 
     // 서버 응답 대기 (임시 지연)
+    // 서버가 음성 데이터를 다 받으면 자동으로 처리를 시작
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
@@ -176,16 +278,32 @@ class _CallScreenState extends State<CallScreen> {
 
 
   Future<void> _handleHangUp({bool isRemote = false}) async {
-    // 자원 해제 로직
+    _audioQueue.clear();
+    _isPlayingAudio = false;
+
     await _audioDataSubscription?.cancel();
     await _webSocketSubscription?.cancel();
-    if (await _recorder.isRecording()) {
-      await _recorder.stop();
-    }
-    _recorder.dispose();
-    _player.dispose();
 
-    _channel?.sink.close();
+    if (!_isRecorderDisposed) {
+      _isRecorderDisposed = true;
+      try {
+        if (await _recorder.isRecording()) {
+          await _recorder.stop();
+        }
+      } catch (e) {}
+      try {
+        _recorder.dispose();
+      } catch (e) {}
+    }
+
+    try {
+      await _player.stop();
+      _player.dispose();
+    } catch (e) {}
+
+    try {
+      _channel?.sink.close();
+    } catch (e) {}
 
     if (mounted) setState(() { _isConnected = false; });
 
@@ -225,12 +343,12 @@ class _CallScreenState extends State<CallScreen> {
                 style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-
-              // [상태 표시]
               Text(
                 _isSending
                     ? 'AI 처리 중...'
-                    : (_isRecording ? '🔴 녹음 중' : (_isConnected ? '연결됨' : '연결 끊김')),
+                    : (!_isSystemReady
+                    ? 'AI 준비 중...'
+                    : (_isRecording ? '🔴 녹음 중' : (_isConnected ? '연결됨' : '연결 끊김'))),
                 style: TextStyle(
                     color: _isRecording ? Colors.redAccent : Colors.white70,
                     fontSize: 18,
@@ -241,15 +359,15 @@ class _CallScreenState extends State<CallScreen> {
 
               const Spacer(flex: 2),
 
-              // --- 버튼 UI ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // 1. 말하기 버튼 (녹음 시작)
                   ElevatedButton(
-                    onPressed: (_isRecording || _isSending || !_isConnected || !_isSystemReady) ? null : _startRecording, // 연결 안되면 비활성화
+                    onPressed: (!_isSystemReady || _isRecording || _isSending || !_isConnected)
+                        ? null
+                        : _startRecording,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: !_isSystemReady
+                      backgroundColor: (!_isSystemReady)
                           ? Colors.grey
                           : (_isRecording ? Colors.orange : Colors.green),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -263,9 +381,8 @@ class _CallScreenState extends State<CallScreen> {
                     ),
                   ),
 
-                  // 2. 보내기 버튼 (음성 전송)
                   ElevatedButton(
-                    onPressed: _isRecording && !_isSending ? _sendAudio : null, // 녹음 중일 때만 활성화
+                    onPressed: _isRecording && !_isSending ? _sendAudio : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isRecording ? Colors.blue : Colors.grey,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -278,8 +395,6 @@ class _CallScreenState extends State<CallScreen> {
                 ],
               ),
               const SizedBox(height: 30),
-
-              // 3. 통화 종료 버튼
               IconButton(
                 onPressed: () => _handleHangUp(isRemote: false),
                 icon: const Icon(Icons.call_end, color: Colors.white, size: 40),
