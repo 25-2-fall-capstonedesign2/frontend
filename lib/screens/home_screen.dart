@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
           id: profile.id, // [중요] ID 매핑
           name: profile.profileName,
           status: '통화가능',
-          statusColor: Colors.blueGrey,
+          statusColor: Colors.black,
           lastSeen: '터치하여 통화 또는 채팅',
           chatHistory: [],
         )).toList();
@@ -132,12 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Anycall', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
         centerTitle: false,
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined)),
-          IconButton(
-            onPressed: _handleLogout,
-            icon: const Icon(Icons.logout_outlined),
-          ),
-
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -149,10 +143,15 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: '목소리 추가',
           ),
 
-          IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined)),
+          IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: '환경 설정',
+          ),
           IconButton(
             onPressed: _handleLogout,
             icon: const Icon(Icons.logout_outlined),
+            tooltip: '로그 아웃',
           ),
         ],
       ),
@@ -237,11 +236,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       title: Text(
         friend.name,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          color: Colors.black,
+        ),
       ),
       subtitle: Text(
         friend.lastSeen,
-        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+        style: TextStyle(color: Colors.black, fontSize: 13),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
