@@ -30,6 +30,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _isConnected = false;
   bool _isRecording = false; // 녹음 상태
   bool _isSending = false; // 전송/AI 처리 중 상태
+  bool _isSystemReady = false; // 시스템 준비 상태
 
   // [오디오 인스턴스]
   final AudioRecorder _recorder = AudioRecorder();
@@ -73,7 +74,7 @@ class _CallScreenState extends State<CallScreen> {
       if (mounted) setState(() { _isConnected = true; });
 
       _webSocketSubscription = _channel!.stream.listen(
-            (message) {
+        (message) {
           // 2. [수신 및 재생] 서버에서 AI 응답을 받으면 재생
           if (message is List<int>) {
             _player.setAudioSource(AudioSource.uri(
@@ -82,6 +83,21 @@ class _CallScreenState extends State<CallScreen> {
             _player.play();
           } else {
             print("서버 텍스트 메시지: $message");
+            try {
+              final data = jsonDecode(message);
+              if (data['type'] == 'system' && data['event'] == 'ready') {
+                if (mounted) {
+                  setState(() {
+                    _isSystemReady = true; // 시스템 준비 완료 -> 버튼 활성화
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("AI 연결 완료! 이제 대화를 시작하세요.")),
+                  );
+                }
+              }
+            } catch (e) {
+              print("JSON 파싱 오류 (무시됨): $e");
+            }
           }
         },
         onDone: () => _handleHangUp(isRemote: true),
@@ -125,10 +141,12 @@ class _CallScreenState extends State<CallScreen> {
     await _audioDataSubscription?.cancel();
     await _recorder.stop();
 
-    if (mounted) setState(() {
-      _isRecording = false;
-      _isSending = true; // 전송 로딩 시작
-    });
+    if (mounted) {
+      setState(() {
+        _isRecording = false;
+        _isSending = true; // 전송 로딩 시작
+      });
+    }
 
     // 오디오 청크들을 하나로 합침
     final totalLength = _audioBuffer.fold(0, (len, chunk) => len + chunk.length);
@@ -149,9 +167,11 @@ class _CallScreenState extends State<CallScreen> {
     // 서버 응답 대기 (임시 지연)
     await Future.delayed(const Duration(seconds: 2));
 
-    if (mounted) setState(() {
-      _isSending = false; // 전송 로딩 끝
-    });
+    if (mounted) {
+      setState(() {
+        _isSending = false; // 전송 로딩 끝
+      });
+    }
   }
 
 
@@ -227,14 +247,18 @@ class _CallScreenState extends State<CallScreen> {
                 children: [
                   // 1. 말하기 버튼 (녹음 시작)
                   ElevatedButton(
-                    onPressed: (_isRecording || _isSending || !_isConnected) ? null : _startRecording, // 연결 안되면 비활성화
+                    onPressed: (_isRecording || _isSending || !_isConnected || !_isSystemReady) ? null : _startRecording, // 연결 안되면 비활성화
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: !_isSystemReady
+                          ? Colors.grey
+                          : (_isRecording ? Colors.orange : Colors.green),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: Text(
-                      '말하기 시작',
+                      !_isSystemReady
+                          ? '준비 중...'
+                          : (_isRecording ? '말하는 중...' : '말하기 시작'),
                       style: const TextStyle(color: Colors.white, fontSize: 18),
                     ),
                   ),
