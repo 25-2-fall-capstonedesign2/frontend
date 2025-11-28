@@ -59,7 +59,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(msg.content, style: const TextStyle(fontSize: 16)),
+                      Text(msg.content, style: const TextStyle(fontSize: 16, color: Colors.black,)),
                       const SizedBox(height: 4),
                       Text(msg.timestamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
                     ],
