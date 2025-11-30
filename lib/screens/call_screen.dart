@@ -129,7 +129,9 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _processAudioQueue() async {
     if (_isPlayingAudio || _audioQueue.isEmpty) return;
 
-    _isPlayingAudio = true;
+    if (mounted) {
+      setState(() { _isPlayingAudio = true; });
+    }
 
     try {
       while (_audioQueue.isNotEmpty) {
@@ -163,7 +165,7 @@ class _CallScreenState extends State<CallScreen> {
     } catch (e) {
       print("오디오 재생 중 오류: $e");
     } finally {
-      _isPlayingAudio = false;
+      setState(() { _isPlayingAudio = false; });
     }
   }
 
@@ -344,13 +346,18 @@ class _CallScreenState extends State<CallScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                _isSending
+                _isPlayingAudio
+                    ? '상대방이 말하는 중이에요! 🔊' // 👈 1순위: 듣는 중
+                    : (_isSending
                     ? 'AI 처리 중...'
                     : (!_isSystemReady
                     ? 'AI 준비 중...'
-                    : (_isRecording ? '🔴 녹음 중' : (_isConnected ? '연결됨' : '연결 끊김'))),
+                    : (_isRecording ? '🔴 녹음 중' : (_isConnected ? '연결됨' : '연결 끊김')))),
                 style: TextStyle(
-                    color: _isRecording ? Colors.redAccent : Colors.white70,
+                  // 듣는 중일 때는 파란색, 녹음 중일 때는 빨간색, 나머지는 흰색/회색
+                    color: _isPlayingAudio
+                        ? Colors.blueAccent
+                        : (_isRecording ? Colors.redAccent : Colors.white70),
                     fontSize: 18,
                     fontWeight: FontWeight.bold
                 ),
