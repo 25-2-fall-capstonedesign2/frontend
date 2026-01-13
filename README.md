@@ -1,6 +1,7 @@
 # Anycall Frontend
 
-A new Flutter project.
+<img width="921" height="649" alt="스크린샷 2026-01-13 오후 5 59 45" src="https://github.com/user-attachments/assets/2ee81aaa-4c09-40e7-8484-66002eaa7230" />
+
 
 ## Getting Started
 
