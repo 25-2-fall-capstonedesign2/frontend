@@ -104,7 +104,7 @@ Anycall 서비스 음성 처리 흐름
 * 사용자의 말이 끝나기 전에 AI가 답변하는 현상: 말하기 버튼을 통해 사용자의 음성을 한번에 전송, AI가 답변하는 동안 말하기 버튼 비활성화 시키는 방법으로 해결
 
 ### 2-5. 주요 화면
-1. 로딩 화면</br>
+</br>1. 로딩 화면</br>
 <img width="190" height="400" alt="스크린샷 2026-02-25 오후 8 08 08" src="https://github.com/user-attachments/assets/812fac65-5a9c-4053-8ab3-4e051d25a8ca" />
 </br>2. 로그인 화면</br>
 <img width="190" height="400" alt="스크린샷 2026-02-25 오후 8 08 31" src="https://github.com/user-attachments/assets/027707dc-f318-4c90-8d6a-1c032e0f4650" />
